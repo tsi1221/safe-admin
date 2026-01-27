@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Portal | Tila</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #7A2CFF;
+            --primary-light: #9A5CFF;
+            --primary-dark: #5A00CC;
+            --bg-canvas: #F8F5FF;
+            --glass-white: rgba(255, 255, 255, 0.85);
+            --text-main: #1A1623;
+            --text-muted: #6B7280;
+            --error: #FF5252;
+        }
+
+        * {
+            box-sizing: border-box;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--bg-canvas);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(122, 44, 255, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(154, 92, 255, 0.1) 0px, transparent 50%);
+            overflow: hidden;
+        }
+
+        /* Animated Background Blobs */
+        .blob {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: var(--primary);
+            filter: blur(80px);
+            border-radius: 50%;
+            z-index: -1;
+            opacity: 0.15;
+            animation: move 20s infinite alternate;
+        }
+
+        @keyframes move {
+            from { transform: translate(-10%, -10%); }
+            to { transform: translate(20%, 20%); }
+        }
+
+        .login-card {
+            background: var(--glass-white);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 3.5rem 3rem;
+            border-radius: 32px;
+            box-shadow: 
+                0 4px 6px -1px rgba(0, 0, 0, 0.05),
+                0 20px 40px -10px rgba(122, 44, 255, 0.15),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+            width: 100%;
+            max-width: 440px;
+            position: relative;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .logo-box {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            border-radius: 18px;
+            margin: 0 auto 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.8rem;
+            font-weight: 800;
+            box-shadow: 0 10px 20px rgba(122, 44, 255, 0.3);
+            transform: rotate(-3deg);
+        }
+
+        .header h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin: 0;
+            letter-spacing: -0.02em;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.6rem;
+            margin-left: 0.2rem;
+            color: var(--text-main);
+        }
+
+        input {
+            width: 100%;
+            padding: 1rem 1.2rem;
+            background: rgba(255, 255, 255, 0.7);
+            border: 1.5px solid rgba(122, 44, 255, 0.1);
+            border-radius: 16px;
+            font-size: 1rem;
+            color: var(--text-main);
+            outline: none;
+        }
+
+        input:focus {
+            background: #fff;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(122, 44, 255, 0.1);
+        }
+
+        button {
+            width: 100%;
+            padding: 1.1rem;
+            margin-top: 1rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 8px 16px rgba(122, 44, 255, 0.2);
+        }
+
+        button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 20px rgba(122, 44, 255, 0.3);
+        }
+
+        button:active { transform: translateY(0); }
+
+        button:disabled {
+            background: #D1D5DB;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        #message {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 14px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: center;
+            display: none;
+        }
+
+        .error { background: #FFE5E5; color: var(--error); display: block !important; }
+        .success { background: #F0EBFF; color: var(--primary); display: block !important; }
+
+        /* Mobile Adjustments */
+        @media (max-width: 480px) {
+            .login-card { padding: 2.5rem 1.5rem; margin: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="blob"></div>
+
+    <div class="login-card">
+        <div class="header">
+            <div class="logo-box">T</div>
+            <h2>Admin Portal</h2>
+            <p>Enter your credentials to manage Tila</p>
+        </div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Work Email</label>
+                <input type="email" id="email" placeholder="name@tila.com" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+
+            <button type="submit" id="submitBtn">Secure Sign In</button>
+        </form>
+
+        <div id="message"></div>
+    </div>
+
+    <script>
+        // Configuration remains the same for functionality
+        const SUPABASE_URL = 'https://yydyzzljffgqhjndzjfp.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5ZHl6emxqZmZncWhqbmR6amZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5ODg0MDMsImV4cCI6MjA4NDU2NDQwM30._II4OLKF2IUbHuTVC0k8CQDYijNGZL0lLGtkwlrohNE';
+
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const loginForm = document.getElementById('loginForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const messageBox = document.getElementById('message');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            toggleLoading(true);
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const { data: authData, error: authError } = await _supabase.auth.signInWithPassword({
+                    email, password
+                });
+
+                if (authError) throw authError;
+
+                const { data: profile, error: profileError } = await _supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', authData.user.id)
+                    .single();
+
+                if (profileError) throw new Error("Verification failed.");
+
+                if (profile.role === 'tila_admin') {
+                    showMessage("Redirecting to dashboard...", "success");
+                    setTimeout(() => window.location.href = 'home', 800);
+                } else {
+                    await _supabase.auth.signOut();
+                    throw new Error("Unauthorized: Admin access only.");
+                }
+            } catch (err) {
+                showMessage(err.message, "error");
+                toggleLoading(false);
+            }
+        });
+
+        function toggleLoading(isLoading) {
+            submitBtn.disabled = isLoading;
+            submitBtn.innerText = isLoading ? "Authenticating..." : "Secure Sign In";
+        }
+
+        function showMessage(msg, type) {
+            messageBox.innerText = msg;
+            messageBox.className = type;
+        }
+    </script>
+</body>
+</html>
