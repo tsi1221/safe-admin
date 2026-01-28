@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergency Reports | Tila Admin</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary: #7A2CFF;
+            --primary-light: #9A5CFF;
+            --primary-dark: #5F1AD6;
+            --bg-canvas: #F8F5FF;
+            --glass-white: rgba(255, 255, 255, 0.92);
+            --glass-white-hover: rgba(255, 255, 255, 0.98);
+            --text-main: #1A1623;
+            --text-muted: #6B7280;
+            --sidebar-width: 280px;
+            --status-pending: #FBBF24;
+            --status-resolved: #10B981;
+            --status-critical: #EF4444;
+            --shadow-light: 0 4px 20px rgba(122, 44, 255, 0.08);
+            --shadow-medium: 0 10px 30px rgba(122, 44, 255, 0.12);
+            --border-radius: 16px;
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            margin: 0;
+            background-color: var(--bg-canvas);
+            background-image: radial-gradient(circle at 10% 20%, rgba(122, 44, 255, 0.05) 0%, transparent 20%),
+                              radial-gradient(circle at 90% 80%, rgba(122, 44, 255, 0.05) 0%, transparent 20%);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar Navigation */
+        aside {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, white 0%, #f9f7ff 100%);
+            border-right: 1px solid rgba(122, 44, 255, 0.08);
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            z-index: 100;
+            box-shadow: var(--shadow-light);
+            transition: var(--transition);
+        }
+
+        .logo {
+            font-weight: 800;
+            font-size: 1.5rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 3rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(122, 44, 255, 0.1);
+        }
+
+        .logo-icon {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            box-shadow: 0 4px 12px rgba(122, 44, 255, 0.3);
+        }
+
+        .nav-link {
+            padding: 1rem 1.2rem;
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .nav-link:hover {
+            background: rgba(122, 44, 255, 0.05);
+            color: var(--primary);
+            transform: translateX(5px);
+        }
+
+        .nav-link.active {
+            background: linear-gradient(90deg, rgba(122, 44, 255, 0.1) 0%, rgba(122, 44, 255, 0.05) 100%);
+            color: var(--primary);
+            border-left: 4px solid var(--primary);
+        }
+
+        .nav-link.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 4px;
+            background: var(--primary);
+            border-radius: 0 4px 4px 0;
+        }
+
+        .nav-link i {
+            width: 20px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        /* Main Content Area */
+        main {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            padding: 2.5rem;
+            transition: var(--transition);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(122, 44, 255, 0.1);
+        }
+
+        .header-text h1 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.9rem;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-text p {
+            color: var(--text-muted);
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            background: var(--glass-white);
+            backdrop-filter: blur(12px);
+            padding: 1.8rem;
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: var(--shadow-light);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-medium);
+            background: var(--glass-white-hover);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+        }
+
+        .stat-card h3 {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin: 0 0 0.8rem 0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stat-card .value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .stat-card .trend {
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .trend.positive {
+            color: var(--status-resolved);
+        }
+
+        .trend.negative {
+            color: var(--status-critical);
+        }
+
+        .stat-icon {
+            position: absolute;
+            right: 1.5rem;
+            top: 1.5rem;
+            font-size: 1.8rem;
+            opacity: 0.2;
+            color: var(--primary);
+        }
+
+        /* Data Tables */
+        .content-card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 1.8rem;
+            box-shadow: var(--shadow-light);
+            transition: var(--transition);
+            margin-bottom: 2rem;
+        }
+
+        .content-card:hover {
+            box-shadow: var(--shadow-medium);
+        }
+
+        .content-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .content-card h2 {
+            font-size: 1.35rem;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .content-card h2 i {
+            color: var(--primary);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th {
+            text-align: left;
+            padding: 1.2rem 1rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-bottom: 1px solid #F3F4F6;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            padding: 1.3rem 1rem;
+            border-bottom: 1px solid #F3F4F6;
+            font-size: 0.95rem;
+        }
+
+        tr:hover td {
+            background-color: rgba(122, 44, 255, 0.03);
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .badge-pending { background: #FFFBEB; color: var(--status-pending); }
+        .badge-resolved { background: #ECFDF5; color: var(--status-resolved); }
+        .badge-critical { background: #FEF2F2; color: var(--status-critical); }
+
+        /* Buttons */
+        .btn {
+            padding: 12px 24px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(122, 44, 255, 0.25);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(122, 44, 255, 0.35);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid rgba(122, 44, 255, 0.3);
+            color: var(--primary);
+            box-shadow: none;
+        }
+
+        .btn-outline:hover {
+            background: rgba(122, 44, 255, 0.05);
+            box-shadow: 0 4px 12px rgba(122, 44, 255, 0.1);
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-medium);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: var(--text-main);
+            font-size: 1.5rem;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 0.5rem;
+        }
+
+        .modal-body {
+            margin-bottom: 1.5rem;
+        }
+
+        /* Report Details */
+        .report-details {
+            background: #F9FAFB;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .report-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #E5E7EB;
+        }
+
+        .report-content {
+            line-height: 1.6;
+            color: var(--text-main);
+            margin-bottom: 1.5rem;
+        }
+
+        /* Media Display */
+        .media-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .media-item {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid rgba(122, 44, 255, 0.2);
+        }
+
+        .media-item img,
+        .media-item video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Loading Animation */
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        .loading {
+            animation: pulse 1.5s infinite;
+        }
+
+        /* Search and Filter */
+        .search-filter {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            padding: 12px 20px;
+            border: 1px solid rgba(122, 44, 255, 0.2);
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: var(--transition);
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(122, 44, 255, 0.1);
+        }
+
+        .filter-select {
+            padding: 12px 20px;
+            border: 1px solid rgba(122, 44, 255, 0.2);
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            background: white;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 992px) {
+            aside {
+                width: 80px;
+                padding: 2rem 1rem;
+            }
+            
+            aside .logo span:not(.logo-icon) {
+                display: none;
+            }
+            
+            .nav-link span {
+                display: none;
+            }
+            
+            .nav-link {
+                justify-content: center;
+                padding: 1rem;
+            }
+            
+            main {
+                margin-left: 80px;
+            }
+            
+            .nav-link:hover span {
+                display: block;
+                position: absolute;
+                left: 100%;
+                top: 50%;
+                transform: translateY(-50%);
+                background: var(--primary);
+                color: white;
+                padding: 8px 12px;
+                border-radius: 6px;
+                white-space: nowrap;
+                margin-left: 10px;
+                font-size: 0.85rem;
+                z-index: 1000;
+            }
+            
+            .nav-link:hover span::before {
+                content: '';
+                position: absolute;
+                left: -5px;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 0;
+                height: 0;
+                border-top: 5px solid transparent;
+                border-bottom: 5px solid transparent;
+                border-right: 5px solid var(--primary);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            main {
+                padding: 1.5rem;
+            }
+            
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1.5rem;
+            }
+            
+            .search-filter {
+                flex-direction: column;
+            }
+            
+            .search-box,
+            .filter-select {
+                width: 100%;
+            }
+            
+            .media-item {
+                width: 100px;
+                height: 100px;
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(122, 44, 255, 0.05);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(122, 44, 255, 0.2);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(122, 44, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <aside>
+        <div class="logo">
+            <div class="logo-icon">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <span>Tila Admin</span>
+        </div>
+        <nav>
+            <a href="../index.html" class="nav-link">
+                <i class="fas fa-chart-line"></i>
+                <span>Overview</span>
+            </a>
+            <a href="#" class="nav-link active">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Emergency Reports</span>
+            </a>
+            <a href="../forum/index.html" class="nav-link">
+                <i class="fas fa-comments"></i>
+                <span>Forum Moderation</span>
+            </a>
+            <a href="../knowledge-base/index.html" class="nav-link">
+                <i class="fas fa-book-open"></i>
+                <span>Knowledge Base</span>
+            </a>
+            <a href="#" class="nav-link">
+                <i class="fas fa-users"></i>
+                <span>User Profiles</span>
+            </a>
+        </nav>
+    </aside>
+
+    <main>
+        <div class="header">
+            <div class="header-text">
+                <h1>Emergency Reports</h1>
+                <p>View and monitor emergency reports with media attachments</p>
+            </div>
+            <button class="btn" onclick="refreshData()">
+                <i class="fas fa-sync-alt"></i>
+                Refresh Data
+            </button>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3><i class="fas fa-exclamation-circle"></i> Total Reports</h3>
+                <div class="value" id="count-reports">--</div>
+                <div class="trend negative">
+                    <i class="fas fa-arrow-up"></i>
+                    <span>Today: <span id="today-reports">0</span></span>
+                </div>
+                <div class="stat-icon">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+            </div>
+            <div class="stat-card">
+                <h3><i class="fas fa-clock"></i> Pending</h3>
+                <div class="value" id="pending-reports" style="color: var(--status-pending);">--</div>
+                <div class="trend negative">
+                    <i class="fas fa-arrow-up"></i>
+                    <span><span id="pending-percentage">0</span>% of total</span>
+                </div>
+                <div class="stat-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+            </div>
+            <div class="stat-card">
+                <h3><i class="fas fa-check-circle"></i> Resolved</h3>
+                <div class="value" id="resolved-reports" style="color: var(--status-resolved);">--</div>
+                <div class="trend positive">
+                    <i class="fas fa-arrow-up"></i>
+                    <span><span id="resolved-percentage">0</span>% of total</span>
+                </div>
+                <div class="stat-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+            <div class="stat-card">
+                <h3><i class="fas fa-fire"></i> Critical</h3>
+                <div class="value" id="critical-reports" style="color: var(--status-critical);">--</div>
+                <div class="trend negative">
+                    <i class="fas fa-arrow-up"></i>
+                    <span><span id="critical-percentage">0</span>% of total</span>
+                </div>
+                <div class="stat-icon">
+                    <i class="fas fa-fire"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <div class="content-card-header">
+                <h2><i class="fas fa-exclamation-triangle"></i> Emergency Reports</h2>
+                <div class="search-filter">
+                    <input type="text" id="search-reports" class="search-box" placeholder="Search reports...">
+                    <select id="filter-status" class="filter-select">
+                        <option value="all">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                    <select id="filter-type" class="filter-select">
+                        <option value="all">All Types</option>
+                        <option value="medical">Medical</option>
+                        <option value="fire">Fire</option>
+                        <option value="police">Police</option>
+                        <option value="infrastructure">Infrastructure</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>User</th>
+                        <th>Content</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Media</th>
+                        <th>View</th>
+                    </tr>
+                </thead>
+                <tbody id="reports-table-body">
+                    <!-- Data will be populated here -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Modal for viewing report details -->
+    <div id="view-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="view-title">Report Details</h3>
+                <button class="close-modal" onclick="closeViewModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="view-content">
+                <!-- Report content will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase Initialization
+        const SUPABASE_URL = 'https://yydyzzljffgqhjndzjfp.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5ZHl6emxqZmZncWhqbmR6amZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5ODg0MDMsImV4cCI6MjA4NDU2NDQwM30._II4OLKF2IUbHuTVC0k8CQDYijNGZL0lLGtkwlrohNE';
+        
+        // Storage bucket name
+        const STORAGE_BUCKET = 'report_media';
+        
+        // Create Supabase client
+        let supabaseClient;
+        if (window.supabase && window.supabase.createClient) {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } else {
+            console.error('Supabase library not loaded');
+            supabaseClient = {
+                from: () => ({
+                    select: () => Promise.resolve({ data: [], error: null }),
+                    insert: () => Promise.resolve({ data: null, error: null }),
+                    update: () => Promise.resolve({ data: null, error: null }),
+                    delete: () => Promise.resolve({ data: null, error: null })
+                }),
+                storage: {
+                    from: () => ({
+                        upload: () => Promise.resolve({ data: null, error: null }),
+                        remove: () => Promise.resolve({ data: null, error: null }),
+                        getPublicUrl: () => ({ data: { publicUrl: '' } })
+                    })
+                }
+            };
+        }
+
+        let allReports = [];
+
+        // Function to get status badge
+        function getStatusBadge(status) {
+            const badges = {
+                'pending': '<span class="badge badge-pending"><i class="fas fa-clock"></i> Pending</span>',
+                'resolved': '<span class="badge badge-resolved"><i class="fas fa-check-circle"></i> Resolved</span>',
+                'critical': '<span class="badge badge-critical"><i class="fas fa-exclamation-circle"></i> Critical</span>'
+            };
+            return badges[status] || '<span class="badge">Unknown</span>';
+        }
+
+        // Function to get type icon
+        function getTypeIcon(type) {
+            const icons = {
+                'medical': '<i class="fas fa-ambulance" style="color: #EF4444;"></i>',
+                'fire': '<i class="fas fa-fire" style="color: #F59E0B;"></i>',
+                'police': '<i class="fas fa-shield-alt" style="color: #3B82F6;"></i>',
+                'infrastructure': '<i class="fas fa-building" style="color: #8B5CF6;"></i>',
+                'natural_disaster': '<i class="fas fa-mountain" style="color: #10B981;"></i>',
+                'accident': '<i class="fas fa-car-crash" style="color: #DC2626;"></i>',
+                'other': '<i class="fas fa-exclamation" style="color: #6B7280;"></i>'
+            };
+            return icons[type] || '<i class="fas fa-exclamation" style="color: #6B7280;"></i>';
+        }
+
+        // Function to get type name
+        function getTypeName(type) {
+            const names = {
+                'medical': 'Medical',
+                'fire': 'Fire',
+                'police': 'Police',
+                'infrastructure': 'Infrastructure',
+                'natural_disaster': 'Natural Disaster',
+                'accident': 'Accident',
+                'other': 'Other'
+            };
+            return names[type] || type;
+        }
+
+        // Function to format date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Function to truncate text
+        function truncateText(text, maxLength = 60) {
+            if (!text) return '';
+            if (text.length <= maxLength) return text;
+            return text.substring(0, maxLength) + '...';
+        }
+
+        // Function to get public URL for media
+        function getMediaPublicUrl(path) {
+            if (!path) return '';
+            
+            // If it's already a full URL, return it
+            if (path.startsWith('http')) {
+                return path;
+            }
+            
+            // Otherwise, get public URL from Supabase storage
+            try {
+                const { data } = supabaseClient
+                    .storage
+                    .from(STORAGE_BUCKET)
+                    .getPublicUrl(path);
+                return data.publicUrl || '';
+            } catch (error) {
+                console.error('Error getting public URL:', error);
+                return '';
+            }
+        }
+
+        // Function to fetch and display emergency reports data
+        async function fetchEmergencyReportsData() {
+            // Show loading states
+            ['count-reports', 'pending-reports', 'resolved-reports', 'critical-reports'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.innerText = '...';
+                    el.classList.add('loading');
+                }
+            });
+
+            try {
+                // Fetch all reports with user info and media
+                const { data: reports, error } = await supabaseClient
+                    .from('report')
+                    .select(`
+                        *,
+                        profiles (id, full_name, username, email, phone),
+                        report_media (id, media_type, media_url)
+                    `)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                allReports = reports || [];
+                
+                // Calculate stats
+                const totalReports = allReports.length;
+                const pendingReports = allReports.filter(report => report.status === 'pending').length;
+                const resolvedReports = allReports.filter(report => report.status === 'resolved').length;
+                const criticalReports = allReports.filter(report => report.status === 'critical').length;
+                
+                const pendingPercentage = totalReports > 0 ? Math.round((pendingReports / totalReports) * 100) : 0;
+                const resolvedPercentage = totalReports > 0 ? Math.round((resolvedReports / totalReports) * 100) : 0;
+                const criticalPercentage = totalReports > 0 ? Math.round((criticalReports / totalReports) * 100) : 0;
+
+                // Today's reports
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const todayReports = allReports.filter(report => 
+                    new Date(report.created_at) >= today
+                ).length;
+
+                // Update stats
+                document.getElementById('count-reports').innerText = totalReports;
+                document.getElementById('pending-reports').innerText = pendingReports;
+                document.getElementById('resolved-reports').innerText = resolvedReports;
+                document.getElementById('critical-reports').innerText = criticalReports;
+                document.getElementById('pending-percentage').innerText = pendingPercentage;
+                document.getElementById('resolved-percentage').innerText = resolvedPercentage;
+                document.getElementById('critical-percentage').innerText = criticalPercentage;
+                document.getElementById('today-reports').innerText = todayReports;
+
+                // Remove loading states
+                ['count-reports', 'pending-reports', 'resolved-reports', 'critical-reports'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.classList.remove('loading');
+                });
+
+                // Display reports
+                displayReports(allReports);
+
+            } catch (error) {
+                console.error('Error fetching emergency reports data:', error);
+                // Fallback to placeholder data
+                loadPlaceholderData();
+            }
+        }
+
+        // Function to display reports
+        function displayReports(reports) {
+            const tbody = document.getElementById('reports-table-body');
+            if (!tbody) return;
+            
+            tbody.innerHTML = reports.map(report => {
+                const userName = report.profiles?.full_name || report.profiles?.username || 'Anonymous';
+                const userContact = report.profiles?.phone || report.profiles?.email || '';
+                const mediaCount = report.report_media?.length || 0;
+                
+                return `
+                    <tr>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 8px; font-weight: 600;">
+                                ${getTypeIcon(report.report_type)}
+                                ${getTypeName(report.report_type)}
+                            </div>
+                        </td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 32px; height: 32px; background: rgba(122, 44, 255, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--primary);">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 500;">${userName}</div>
+                                    ${userContact ? `<small style="color: var(--text-muted);">${userContact}</small>` : ''}
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="max-width: 200px;">
+                                ${truncateText(report.text_content, 50)}
+                            </div>
+                        </td>
+                        <td>${getStatusBadge(report.status)}</td>
+                        <td>
+                            <div style="color: var(--text-muted);">
+                                ${formatDate(report.created_at)}
+                            </div>
+                        </td>
+                        <td>
+                            ${mediaCount > 0 ? 
+                                `<span class="badge" style="background: #E0F2FE; color: #0369A1;">
+                                    <i class="fas fa-paperclip"></i> ${mediaCount}
+                                </span>` : 
+                                '<span style="color: var(--text-muted);">None</span>'
+                            }
+                        </td>
+                        <td>
+                            <button class="btn-outline btn-sm" onclick="viewReport(${report.id})" title="View Details">
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Function to view report details
+        async function viewReport(reportId) {
+            const report = allReports.find(r => r.id === reportId);
+            if (!report) return;
+
+            const modal = document.getElementById('view-modal');
+            const content = document.getElementById('view-content');
+            const title = document.getElementById('view-title');
+            
+            const userName = report.profiles?.full_name || report.profiles?.username || 'Anonymous';
+            const userContact = report.profiles?.phone || report.profiles?.email || '';
+            
+            title.textContent = `${getTypeName(report.report_type)} Report`;
+            
+            // Process media URLs to ensure they're accessible
+            let mediaHTML = '';
+            if (report.report_media && report.report_media.length > 0) {
+                mediaHTML = `
+                    <div style="margin-top: 1.5rem;">
+                        <div style="font-weight: 600; margin-bottom: 1rem; color: var(--text-muted);">Media Attachments:</div>
+                        <div class="media-preview">
+                            ${report.report_media.map(media => {
+                                const mediaUrl = getMediaPublicUrl(media.media_url);
+                                return `
+                                    <div class="media-item">
+                                        ${media.media_type === 'image' ? 
+                                            `<img src="${mediaUrl}" alt="Report media" style="cursor: pointer;" onclick="window.open('${mediaUrl}', '_blank')">` : 
+                                            `<video controls><source src="${mediaUrl}" type="video/mp4"></video>`
+                                        }
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            content.innerHTML = `
+                <div class="report-details">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
+                        <div>
+                            <div style="font-weight: 600; font-size: 1.2rem; margin-bottom: 0.5rem;">
+                                ${getTypeIcon(report.report_type)} ${getTypeName(report.report_type)}
+                            </div>
+                            ${getStatusBadge(report.status)}
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-weight: 600; color: var(--text-muted);">Report ID:</div>
+                            <div>${report.id}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="report-content">
+                        <div style="font-weight: 600; margin-bottom: 0.5rem; color: var(--text-muted);">Description:</div>
+                        <div>${report.text_content || 'No description provided'}</div>
+                    </div>
+                    
+                    <div class="report-meta">
+                        <span><i class="fas fa-user"></i> ${userName}</span>
+                        ${userContact ? `<span><i class="fas fa-phone"></i> ${userContact}</span>` : ''}
+                        <span><i class="far fa-calendar"></i> ${formatDate(report.created_at)}</span>
+                    </div>
+                    
+                    ${mediaHTML}
+                </div>
+                
+                <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button class="btn" onclick="closeViewModal()">
+                        Close
+                    </button>
+                </div>
+            `;
+            
+            modal.style.display = 'flex';
+        }
+
+        // Function to update stats
+        function updateStats() {
+            const totalReports = allReports.length;
+            const pendingReports = allReports.filter(report => report.status === 'pending').length;
+            const resolvedReports = allReports.filter(report => report.status === 'resolved').length;
+            const criticalReports = allReports.filter(report => report.status === 'critical').length;
+            
+            const pendingPercentage = totalReports > 0 ? Math.round((pendingReports / totalReports) * 100) : 0;
+            const resolvedPercentage = totalReports > 0 ? Math.round((resolvedReports / totalReports) * 100) : 0;
+            const criticalPercentage = totalReports > 0 ? Math.round((criticalReports / totalReports) * 100) : 0;
+
+            // Today's reports
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todayReports = allReports.filter(report => 
+                new Date(report.created_at) >= today
+            ).length;
+
+            document.getElementById('count-reports').innerText = totalReports;
+            document.getElementById('pending-reports').innerText = pendingReports;
+            document.getElementById('resolved-reports').innerText = resolvedReports;
+            document.getElementById('critical-reports').innerText = criticalReports;
+            document.getElementById('pending-percentage').innerText = pendingPercentage;
+            document.getElementById('resolved-percentage').innerText = resolvedPercentage;
+            document.getElementById('critical-percentage').innerText = criticalPercentage;
+            document.getElementById('today-reports').innerText = todayReports;
+        }
+
+        // Function to close view modal
+        function closeViewModal() {
+            document.getElementById('view-modal').style.display = 'none';
+        }
+
+        // Function to refresh data
+        function refreshData() {
+            fetchEmergencyReportsData();
+            const btn = event?.target;
+            if (btn) {
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+                btn.disabled = true;
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                }, 1000);
+            }
+        }
+
+        // Search and filter functionality
+        document.getElementById('search-reports')?.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const filtered = allReports.filter(report => 
+                (report.text_content || '').toLowerCase().includes(searchTerm) ||
+                (report.profiles?.full_name || '').toLowerCase().includes(searchTerm) ||
+                (report.profiles?.username || '').toLowerCase().includes(searchTerm) ||
+                report.report_type.toLowerCase().includes(searchTerm)
+            );
+            displayReports(filtered);
+        });
+
+        document.getElementById('filter-status')?.addEventListener('change', function(e) {
+            filterReports();
+        });
+
+        document.getElementById('filter-type')?.addEventListener('change', function(e) {
+            filterReports();
+        });
+
+        function filterReports() {
+            const status = document.getElementById('filter-status').value;
+            const type = document.getElementById('filter-type').value;
+            
+            let filtered = [...allReports];
+            
+            if (status !== 'all') {
+                filtered = filtered.filter(report => report.status === status);
+            }
+            
+            if (type !== 'all') {
+                filtered = filtered.filter(report => report.report_type === type);
+            }
+            
+            displayReports(filtered);
+        }
+
+        // Function to load placeholder data (for demo purposes)
+        function loadPlaceholderData() {
+            // Placeholder stats
+            document.getElementById('count-reports').innerText = '24';
+            document.getElementById('pending-reports').innerText = '12';
+            document.getElementById('resolved-reports').innerText = '8';
+            document.getElementById('critical-reports').innerText = '4';
+            document.getElementById('pending-percentage').innerText = '50';
+            document.getElementById('resolved-percentage').innerText = '33';
+            document.getElementById('critical-percentage').innerText = '17';
+            document.getElementById('today-reports').innerText = '3';
+
+            // Placeholder reports with media URLs
+            const placeholderReports = [
+                { 
+                    id: 1, 
+                    report_type: 'medical',
+                    status: 'critical',
+                    text_content: 'Car accident on Main Street with injuries, need ambulance immediately.',
+                    user_id: '550e8400-e29b-41d4-a716-446655440001',
+                    created_at: new Date(),
+                    profiles: {
+                        full_name: 'John Doe',
+                        username: 'johndoe',
+                        email: 'john@example.com',
+                        phone: '987-654-3210'
+                    },
+                    report_media: [
+                        {
+                            id: 1,
+                            media_type: 'image',
+                            media_url: 'https://images.unsplash.com/photo-1588614959060-4d144f28b207?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
+                        }
+                    ]
+                },
+                { 
+                    id: 2, 
+                    report_type: 'fire',
+                    status: 'pending',
+                    text_content: 'Smoke coming from apartment building on 5th Avenue.',
+                    user_id: null,
+                    created_at: new Date(Date.now() - 3600000),
+                    profiles: null,
+                    report_media: [
+                        {
+                            id: 2,
+                            media_type: 'image',
+                            media_url: 'https://images.unsplash.com/photo-1566911435290-78bc4c4b389e?ixlib=rb-4.0.3&auto=format&fit=crop&w-600&q=80'
+                        },
+                        {
+                            id: 3,
+                            media_type: 'video',
+                            media_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
+                        }
+                    ]
+                },
+                { 
+                    id: 3, 
+                    report_type: 'infrastructure',
+                    status: 'resolved',
+                    text_content: 'Power outage in downtown area affecting multiple buildings.',
+                    user_id: '550e8400-e29b-41d4-a716-446655440000',
+                    created_at: new Date(Date.now() - 7200000),
+                    profiles: {
+                        full_name: 'Admin User',
+                        username: 'admin',
+                        email: 'admin@example.com',
+                        phone: '123-456-7890'
+                    },
+                    report_media: []
+                }
+            ];
+            
+            allReports = placeholderReports;
+            displayReports(placeholderReports);
+        }
+
+        // Initialize the emergency reports page
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchEmergencyReportsData();
+            
+            // Close modal when clicking outside
+            window.addEventListener('click', function(event) {
+                const modals = document.querySelectorAll('.modal');
+                modals.forEach(modal => {
+                    if (event.target === modal) {
+                        closeViewModal();
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
