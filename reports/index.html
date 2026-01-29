@@ -7,6 +7,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <style>
         :root {
@@ -20,12 +22,14 @@
             --text-muted: #6B7280;
             --sidebar-width: 280px;
             --status-pending: #FBBF24;
+            --status-in-progress: #3B82F6;
             --status-resolved: #10B981;
             --status-critical: #EF4444;
             --shadow-light: 0 4px 20px rgba(122, 44, 255, 0.08);
             --shadow-medium: 0 10px 30px rgba(122, 44, 255, 0.12);
             --border-radius: 16px;
             --transition: all 0.3s ease;
+            --map-height: 300px;
         }
 
         * {
@@ -238,7 +242,7 @@
             color: var(--primary);
         }
 
-        /* Data Tables */
+        /* Content Cards */
         .content-card {
             background: white;
             border-radius: var(--border-radius);
@@ -257,6 +261,8 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
         }
 
         .content-card h2 {
@@ -271,6 +277,7 @@
             color: var(--primary);
         }
 
+        /* Table Styles */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -292,25 +299,33 @@
             padding: 1.3rem 1rem;
             border-bottom: 1px solid #F3F4F6;
             font-size: 0.95rem;
+            vertical-align: middle;
         }
 
         tr:hover td {
             background-color: rgba(122, 44, 255, 0.03);
         }
 
+        /* Badges */
         .badge {
             padding: 6px 12px;
             border-radius: 8px;
             font-size: 0.75rem;
             font-weight: 700;
+            text-transform: uppercase;
             display: inline-flex;
             align-items: center;
             gap: 5px;
         }
 
-        .badge-pending { background: #FFFBEB; color: var(--status-pending); }
-        .badge-resolved { background: #ECFDF5; color: var(--status-resolved); }
-        .badge-critical { background: #FEF2F2; color: var(--status-critical); }
+        .badge-pending { background: #FEF3C7; color: #92400E; }
+        .badge-in-progress { background: #DBEAFE; color: #1E40AF; }
+        .badge-resolved { background: #D1FAE5; color: #065F46; }
+        .badge-critical { background: #FEE2E2; color: #991B1B; }
+        .badge-fire { background: #FEF3C7; color: #92400E; }
+        .badge-flood { background: #DBEAFE; color: #1E40AF; }
+        .badge-medical { background: #FCE7F3; color: #9D174D; }
+        .badge-security { background: #E0E7FF; color: #3730A3; }
 
         /* Buttons */
         .btn {
@@ -345,121 +360,18 @@
             box-shadow: 0 4px 12px rgba(122, 44, 255, 0.1);
         }
 
+        .btn-danger {
+            background: linear-gradient(90deg, #EF4444 0%, #DC2626 100%);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+        }
+
+        .btn-danger:hover {
+            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.35);
+        }
+
         .btn-sm {
             padding: 8px 16px;
             font-size: 0.85rem;
-        }
-
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: var(--border-radius);
-            padding: 2rem;
-            width: 90%;
-            max-width: 800px;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: var(--shadow-medium);
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .modal-header h3 {
-            margin: 0;
-            color: var(--text-main);
-            font-size: 1.5rem;
-        }
-
-        .close-modal {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: var(--text-muted);
-            padding: 0.5rem;
-        }
-
-        .modal-body {
-            margin-bottom: 1.5rem;
-        }
-
-        /* Report Details */
-        .report-details {
-            background: #F9FAFB;
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin: 1rem 0;
-        }
-
-        .report-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1.5rem;
-            color: var(--text-muted);
-            font-size: 0.875rem;
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid #E5E7EB;
-        }
-
-        .report-content {
-            line-height: 1.6;
-            color: var(--text-main);
-            margin-bottom: 1.5rem;
-        }
-
-        /* Media Display */
-        .media-preview {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .media-item {
-            position: relative;
-            width: 120px;
-            height: 120px;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid rgba(122, 44, 255, 0.2);
-        }
-
-        .media-item img,
-        .media-item video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        /* Loading Animation */
-        @keyframes pulse {
-            0% { opacity: 0.6; }
-            50% { opacity: 1; }
-            100% { opacity: 0.6; }
-        }
-
-        .loading {
-            animation: pulse 1.5s infinite;
         }
 
         /* Search and Filter */
@@ -500,6 +412,180 @@
         .filter-select:focus {
             outline: none;
             border-color: var(--primary);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-medium);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: var(--text-main);
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 0.5rem;
+        }
+
+        .modal-body {
+            margin-bottom: 1.5rem;
+        }
+
+        /* Media Gallery */
+        .media-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .media-item {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #F3F4F6;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .media-item:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .media-item img, .media-item video {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .media-item-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .media-item:hover .media-item-overlay {
+            opacity: 1;
+        }
+
+        .media-type-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+
+        .media-preview-modal {
+            background: rgba(0, 0, 0, 0.9);
+        }
+
+        .media-preview-content {
+            max-width: 90vw;
+            max-height: 90vh;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        .media-preview {
+            max-width: 100%;
+            max-height: 80vh;
+            object-fit: contain;
+        }
+
+        /* Report Details */
+        .report-details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .detail-item {
+            background: #F9FAFB;
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .detail-item h4 {
+            margin: 0 0 0.5rem 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .detail-item p {
+            margin: 0;
+            font-weight: 500;
+        }
+
+        /* Loading Animation */
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        .loading {
+            animation: pulse 1.5s infinite;
+        }
+
+        /* Map Container */
+        #map {
+            height: var(--map-height);
+            width: 100%;
+            border-radius: var(--border-radius);
+            margin-bottom: 1rem;
+            border: 1px solid rgba(122, 44, 255, 0.1);
+            box-shadow: var(--shadow-light);
         }
 
         /* Responsive Design */
@@ -586,9 +672,13 @@
                 width: 100%;
             }
             
-            .media-item {
-                width: 100px;
-                height: 100px;
+            .content-card-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .media-gallery {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             }
         }
 
@@ -610,6 +700,15 @@
         ::-webkit-scrollbar-thumb:hover {
             background: rgba(122, 44, 255, 0.3);
         }
+
+        /* Time indicator */
+        .time-ago {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
     </style>
 </head>
 <body>
@@ -622,23 +721,23 @@
             <span>Tila Admin</span>
         </div>
         <nav>
-            <a href="../index.html" class="nav-link">
-                <i class="fas fa-chart-line"></i>
-                <span>Overview</span>
+            <a href="../home/" class="nav-link">
+                <i class="fas fa-house"></i>
+                <span>Home</span>
             </a>
-            <a href="#" class="nav-link active">
+            <a href="../reports" class="nav-link active">
                 <i class="fas fa-exclamation-triangle"></i>
                 <span>Emergency Reports</span>
             </a>
-            <a href="../forum/index.html" class="nav-link">
+            <a href="../forum/" class="nav-link">
                 <i class="fas fa-comments"></i>
                 <span>Forum Moderation</span>
             </a>
-            <a href="../knowledge-base/index.html" class="nav-link">
+            <a href="../knowledge-base/" class="nav-link">
                 <i class="fas fa-book-open"></i>
                 <span>Knowledge Base</span>
             </a>
-            <a href="#" class="nav-link">
+            <a href="../users/" class="nav-link">
                 <i class="fas fa-users"></i>
                 <span>User Profiles</span>
             </a>
@@ -649,7 +748,7 @@
         <div class="header">
             <div class="header-text">
                 <h1>Emergency Reports</h1>
-                <p>View and monitor emergency reports with media attachments</p>
+                <p>Manage and respond to emergency reports with attached media</p>
             </div>
             <button class="btn" onclick="refreshData()">
                 <i class="fas fa-sync-alt"></i>
@@ -659,22 +758,22 @@
 
         <div class="stats-grid">
             <div class="stat-card">
-                <h3><i class="fas fa-exclamation-circle"></i> Total Reports</h3>
-                <div class="value" id="count-reports">--</div>
-                <div class="trend negative">
-                    <i class="fas fa-arrow-up"></i>
+                <h3><i class="fas fa-exclamation-triangle"></i> Total Reports</h3>
+                <div class="value" id="count-total-reports">--</div>
+                <div class="trend">
+                    <i class="fas fa-chart-line"></i>
                     <span>Today: <span id="today-reports">0</span></span>
                 </div>
                 <div class="stat-icon">
-                    <i class="fas fa-exclamation-circle"></i>
+                    <i class="fas fa-exclamation-triangle"></i>
                 </div>
             </div>
             <div class="stat-card">
                 <h3><i class="fas fa-clock"></i> Pending</h3>
-                <div class="value" id="pending-reports" style="color: var(--status-pending);">--</div>
+                <div class="value" id="count-pending">--</div>
                 <div class="trend negative">
                     <i class="fas fa-arrow-up"></i>
-                    <span><span id="pending-percentage">0</span>% of total</span>
+                    <span>Needs attention</span>
                 </div>
                 <div class="stat-icon">
                     <i class="fas fa-clock"></i>
@@ -682,45 +781,45 @@
             </div>
             <div class="stat-card">
                 <h3><i class="fas fa-check-circle"></i> Resolved</h3>
-                <div class="value" id="resolved-reports" style="color: var(--status-resolved);">--</div>
+                <div class="value" id="count-resolved">--</div>
                 <div class="trend positive">
                     <i class="fas fa-arrow-up"></i>
-                    <span><span id="resolved-percentage">0</span>% of total</span>
+                    <span>This week: <span id="week-resolved">0</span></span>
                 </div>
                 <div class="stat-icon">
                     <i class="fas fa-check-circle"></i>
                 </div>
             </div>
             <div class="stat-card">
-                <h3><i class="fas fa-fire"></i> Critical</h3>
-                <div class="value" id="critical-reports" style="color: var(--status-critical);">--</div>
-                <div class="trend negative">
-                    <i class="fas fa-arrow-up"></i>
-                    <span><span id="critical-percentage">0</span>% of total</span>
+                <h3><i class="fas fa-images"></i> Media Files</h3>
+                <div class="value" id="count-media">--</div>
+                <div class="trend">
+                    <i class="fas fa-camera"></i>
+                    <span>Attachments</span>
                 </div>
                 <div class="stat-icon">
-                    <i class="fas fa-fire"></i>
+                    <i class="fas fa-images"></i>
                 </div>
             </div>
         </div>
 
         <div class="content-card">
             <div class="content-card-header">
-                <h2><i class="fas fa-exclamation-triangle"></i> Emergency Reports</h2>
+                <h2><i class="fas fa-list"></i> Emergency Reports</h2>
                 <div class="search-filter">
                     <input type="text" id="search-reports" class="search-box" placeholder="Search reports...">
                     <select id="filter-status" class="filter-select">
                         <option value="all">All Status</option>
                         <option value="pending">Pending</option>
+                        <option value="in-progress">In Progress</option>
                         <option value="resolved">Resolved</option>
-                        <option value="critical">Critical</option>
                     </select>
                     <select id="filter-type" class="filter-select">
                         <option value="all">All Types</option>
-                        <option value="medical">Medical</option>
                         <option value="fire">Fire</option>
-                        <option value="police">Police</option>
-                        <option value="infrastructure">Infrastructure</option>
+                        <option value="flood">Flood</option>
+                        <option value="medical">Medical</option>
+                        <option value="security">Security</option>
                         <option value="other">Other</option>
                     </select>
                 </div>
@@ -728,13 +827,13 @@
             <table>
                 <thead>
                     <tr>
+                        <th>Report Details</th>
                         <th>Type</th>
                         <th>User</th>
-                        <th>Content</th>
                         <th>Status</th>
                         <th>Date</th>
                         <th>Media</th>
-                        <th>View</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="reports-table-body">
@@ -745,14 +844,27 @@
     </main>
 
     <!-- Modal for viewing report details -->
-    <div id="view-modal" class="modal">
+    <div id="report-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="view-title">Report Details</h3>
-                <button class="close-modal" onclick="closeViewModal()">&times;</button>
+                <h3>Emergency Report Details</h3>
+                <button class="close-modal" onclick="closeModal()">&times;</button>
             </div>
-            <div class="modal-body" id="view-content">
-                <!-- Report content will be populated here -->
+            <div class="modal-body" id="report-details">
+                <!-- Report details will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for viewing media -->
+    <div id="media-modal" class="modal media-preview-modal">
+        <div class="modal-content media-preview-content">
+            <div class="modal-header">
+                <h3 style="color: white;">Media Preview</h3>
+                <button class="close-modal" style="color: white;" onclick="closeMediaModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="media-preview">
+                <!-- Media will be displayed here -->
             </div>
         </div>
     </div>
@@ -762,10 +874,6 @@
         const SUPABASE_URL = 'https://yydyzzljffgqhjndzjfp.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5ZHl6emxqZmZncWhqbmR6amZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5ODg0MDMsImV4cCI6MjA4NDU2NDQwM30._II4OLKF2IUbHuTVC0k8CQDYijNGZL0lLGtkwlrohNE';
         
-        // Storage bucket name
-        const STORAGE_BUCKET = 'report_media';
-        
-        // Create Supabase client
         let supabaseClient;
         if (window.supabase && window.supabase.createClient) {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -780,6 +888,7 @@
                 }),
                 storage: {
                     from: () => ({
+                        list: () => Promise.resolve({ data: [], error: null }),
                         upload: () => Promise.resolve({ data: null, error: null }),
                         remove: () => Promise.resolve({ data: null, error: null }),
                         getPublicUrl: () => ({ data: { publicUrl: '' } })
@@ -788,91 +897,67 @@
             };
         }
 
+        // Global variables
         let allReports = [];
+        let currentReportMedia = [];
+        let reportMap = null;
+
+        // Function to format time ago
+        function timeAgo(date) {
+            const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+            
+            if (seconds < 60) return 'Just now';
+            
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m ago`;
+            
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h ago`;
+            
+            const days = Math.floor(hours / 24);
+            if (days < 30) return `${days}d ago`;
+            
+            const months = Math.floor(days / 30);
+            if (months < 12) return `${months}mo ago`;
+            
+            const years = Math.floor(months / 12);
+            return `${years}y ago`;
+        }
 
         // Function to get status badge
         function getStatusBadge(status) {
             const badges = {
                 'pending': '<span class="badge badge-pending"><i class="fas fa-clock"></i> Pending</span>',
+                'in-progress': '<span class="badge badge-in-progress"><i class="fas fa-spinner fa-spin"></i> In Progress</span>',
                 'resolved': '<span class="badge badge-resolved"><i class="fas fa-check-circle"></i> Resolved</span>',
                 'critical': '<span class="badge badge-critical"><i class="fas fa-exclamation-circle"></i> Critical</span>'
             };
-            return badges[status] || '<span class="badge">Unknown</span>';
+            return badges[status] || badges['pending'];
         }
 
-        // Function to get type icon
-        function getTypeIcon(type) {
-            const icons = {
-                'medical': '<i class="fas fa-ambulance" style="color: #EF4444;"></i>',
-                'fire': '<i class="fas fa-fire" style="color: #F59E0B;"></i>',
-                'police': '<i class="fas fa-shield-alt" style="color: #3B82F6;"></i>',
-                'infrastructure': '<i class="fas fa-building" style="color: #8B5CF6;"></i>',
-                'natural_disaster': '<i class="fas fa-mountain" style="color: #10B981;"></i>',
-                'accident': '<i class="fas fa-car-crash" style="color: #DC2626;"></i>',
-                'other': '<i class="fas fa-exclamation" style="color: #6B7280;"></i>'
+        // Function to get type badge
+        function getTypeBadge(type) {
+            const badges = {
+                'fire': '<span class="badge badge-fire"><i class="fas fa-fire"></i> Fire</span>',
+                'flood': '<span class="badge badge-flood"><i class="fas fa-water"></i> Flood</span>',
+                'medical': '<span class="badge badge-medical"><i class="fas fa-first-aid"></i> Medical</span>',
+                'security': '<span class="badge badge-security"><i class="fas fa-shield-alt"></i> Security</span>',
+                'other': '<span class="badge" style="background: #F3F4F6; color: var(--text-muted);"><i class="fas fa-question-circle"></i> Other</span>'
             };
-            return icons[type] || '<i class="fas fa-exclamation" style="color: #6B7280;"></i>';
-        }
-
-        // Function to get type name
-        function getTypeName(type) {
-            const names = {
-                'medical': 'Medical',
-                'fire': 'Fire',
-                'police': 'Police',
-                'infrastructure': 'Infrastructure',
-                'natural_disaster': 'Natural Disaster',
-                'accident': 'Accident',
-                'other': 'Other'
-            };
-            return names[type] || type;
-        }
-
-        // Function to format date
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
+            return badges[type] || badges['other'];
         }
 
         // Function to truncate text
-        function truncateText(text, maxLength = 60) {
-            if (!text) return '';
+        function truncateText(text, maxLength = 100) {
+            if (!text) return 'No description';
             if (text.length <= maxLength) return text;
             return text.substring(0, maxLength) + '...';
         }
 
-        // Function to get public URL for media
-        function getMediaPublicUrl(path) {
-            if (!path) return '';
-            
-            // If it's already a full URL, return it
-            if (path.startsWith('http')) {
-                return path;
-            }
-            
-            // Otherwise, get public URL from Supabase storage
-            try {
-                const { data } = supabaseClient
-                    .storage
-                    .from(STORAGE_BUCKET)
-                    .getPublicUrl(path);
-                return data.publicUrl || '';
-            } catch (error) {
-                console.error('Error getting public URL:', error);
-                return '';
-            }
-        }
-
-        // Function to fetch and display emergency reports data
-        async function fetchEmergencyReportsData() {
+        // Function to fetch and display emergency reports
+        async function fetchEmergencyReports() {
             // Show loading states
-            ['count-reports', 'pending-reports', 'resolved-reports', 'critical-reports'].forEach(id => {
+            ['count-total-reports', 'count-pending', 'count-resolved', 'count-media'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
                     el.innerText = '...';
@@ -881,13 +966,12 @@
             });
 
             try {
-                // Fetch all reports with user info and media
+                // Fetch reports with user data
                 const { data: reports, error } = await supabaseClient
                     .from('report')
                     .select(`
                         *,
-                        profiles (id, full_name, username, email, phone),
-                        report_media (id, media_type, media_url)
+                        profiles (full_name, username, phone, email)
                     `)
                     .order('created_at', { ascending: false });
 
@@ -895,220 +979,455 @@
 
                 allReports = reports || [];
                 
-                // Calculate stats
-                const totalReports = allReports.length;
-                const pendingReports = allReports.filter(report => report.status === 'pending').length;
-                const resolvedReports = allReports.filter(report => report.status === 'resolved').length;
-                const criticalReports = allReports.filter(report => report.status === 'critical').length;
-                
-                const pendingPercentage = totalReports > 0 ? Math.round((pendingReports / totalReports) * 100) : 0;
-                const resolvedPercentage = totalReports > 0 ? Math.round((resolvedReports / totalReports) * 100) : 0;
-                const criticalPercentage = totalReports > 0 ? Math.round((criticalReports / totalReports) * 100) : 0;
+                // Fetch media counts
+                const { data: mediaData } = await supabaseClient
+                    .from('report_media')
+                    .select('report_id');
 
+                // Calculate statistics
+                const totalReports = allReports.length;
+                const pendingReports = allReports.filter(r => r.status === 'pending').length;
+                const resolvedReports = allReports.filter(r => r.status === 'resolved').length;
+                
                 // Today's reports
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-                const todayReports = allReports.filter(report => 
-                    new Date(report.created_at) >= today
+                const todayReports = allReports.filter(r => new Date(r.created_at) >= today).length;
+                
+                // This week's resolved reports
+                const weekAgo = new Date();
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                const weekResolved = allReports.filter(r => 
+                    r.status === 'resolved' && new Date(r.created_at) >= weekAgo
                 ).length;
 
+                // Media files count
+                const mediaCount = mediaData?.length || 0;
+
                 // Update stats
-                document.getElementById('count-reports').innerText = totalReports;
-                document.getElementById('pending-reports').innerText = pendingReports;
-                document.getElementById('resolved-reports').innerText = resolvedReports;
-                document.getElementById('critical-reports').innerText = criticalReports;
-                document.getElementById('pending-percentage').innerText = pendingPercentage;
-                document.getElementById('resolved-percentage').innerText = resolvedPercentage;
-                document.getElementById('critical-percentage').innerText = criticalPercentage;
+                document.getElementById('count-total-reports').innerText = totalReports;
+                document.getElementById('count-pending').innerText = pendingReports;
+                document.getElementById('count-resolved').innerText = resolvedReports;
+                document.getElementById('count-media').innerText = mediaCount;
                 document.getElementById('today-reports').innerText = todayReports;
+                document.getElementById('week-resolved').innerText = weekResolved;
 
                 // Remove loading states
-                ['count-reports', 'pending-reports', 'resolved-reports', 'critical-reports'].forEach(id => {
+                ['count-total-reports', 'count-pending', 'count-resolved', 'count-media'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.classList.remove('loading');
                 });
 
-                // Display reports
+                // Display reports in table
                 displayReports(allReports);
 
             } catch (error) {
-                console.error('Error fetching emergency reports data:', error);
-                // Fallback to placeholder data
+                console.error('Error fetching emergency reports:', error);
                 loadPlaceholderData();
             }
         }
 
-        // Function to display reports
+        // Function to display reports in table
         function displayReports(reports) {
             const tbody = document.getElementById('reports-table-body');
             if (!tbody) return;
             
             tbody.innerHTML = reports.map(report => {
-                const userName = report.profiles?.full_name || report.profiles?.username || 'Anonymous';
-                const userContact = report.profiles?.phone || report.profiles?.email || '';
-                const mediaCount = report.report_media?.length || 0;
+                const hasMedia = report.media_url || (report.media_data && report.media_data.length > 0);
+                const isToday = new Date().toDateString() === new Date(report.created_at).toDateString();
+                const isCritical = report.status === 'pending' && 
+                    (new Date() - new Date(report.created_at)) > 3600000; // Older than 1 hour
                 
                 return `
                     <tr>
                         <td>
-                            <div style="display: flex; align-items: center; gap: 8px; font-weight: 600;">
-                                ${getTypeIcon(report.report_type)}
-                                ${getTypeName(report.report_type)}
+                            <div style="font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+                                ${truncateText(report.text_content, 60)}
+                                ${isToday ? '<span class="badge badge-new" style="background: #E0F2FE; color: #0369A1;">NEW</span>' : ''}
+                                ${isCritical ? '<span class="badge badge-critical"><i class="fas fa-exclamation-circle"></i> URGENT</span>' : ''}
+                            </div>
+                            <div style="font-size: 0.85rem; color: var(--text-muted);">
+                                ID: ${report.id}
                             </div>
                         </td>
+                        <td>${getTypeBadge(report.report_type)}</td>
                         <td>
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <div style="width: 32px; height: 32px; background: rgba(122, 44, 255, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--primary);">
                                     <i class="fas fa-user"></i>
                                 </div>
                                 <div>
-                                    <div style="font-weight: 500;">${userName}</div>
-                                    ${userContact ? `<small style="color: var(--text-muted);">${userContact}</small>` : ''}
+                                    <div style="font-weight: 500;">${report.profiles?.full_name || 'Anonymous'}</div>
+                                    <small style="color: var(--text-muted);">${report.profiles?.username || ''}</small>
                                 </div>
-                            </div>
-                        </td>
-                        <td>
-                            <div style="max-width: 200px;">
-                                ${truncateText(report.text_content, 50)}
                             </div>
                         </td>
                         <td>${getStatusBadge(report.status)}</td>
                         <td>
-                            <div style="color: var(--text-muted);">
-                                ${formatDate(report.created_at)}
+                            <div class="time-ago">
+                                <i class="far fa-clock"></i>
+                                ${timeAgo(report.created_at)}
                             </div>
+                            <small style="color: var(--text-muted); display: block; margin-top: 4px;">
+                                ${new Date(report.created_at).toLocaleDateString()}
+                            </small>
                         </td>
                         <td>
-                            ${mediaCount > 0 ? 
-                                `<span class="badge" style="background: #E0F2FE; color: #0369A1;">
-                                    <i class="fas fa-paperclip"></i> ${mediaCount}
-                                </span>` : 
-                                '<span style="color: var(--text-muted);">None</span>'
-                            }
+                            ${hasMedia ? 
+                                '<span class="badge" style="background: #E0F2FE; color: #0369A1;"><i class="fas fa-image"></i> Has Media</span>' : 
+                                '<span style="color: var(--text-muted); font-size: 0.85rem;">None</span>'}
                         </td>
                         <td>
-                            <button class="btn-outline btn-sm" onclick="viewReport(${report.id})" title="View Details">
-                                <i class="fas fa-eye"></i> View
-                            </button>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn-outline btn-sm" onclick="viewReport(${report.id})">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn-outline btn-sm" onclick="updateReportStatus(${report.id})">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn-outline btn-sm btn-danger" onclick="deleteReport(${report.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `;
             }).join('');
         }
 
-        // Function to view report details
+        // Function to view report details with media
         async function viewReport(reportId) {
             const report = allReports.find(r => r.id === reportId);
             if (!report) return;
 
-            const modal = document.getElementById('view-modal');
-            const content = document.getElementById('view-content');
-            const title = document.getElementById('view-title');
-            
-            const userName = report.profiles?.full_name || report.profiles?.username || 'Anonymous';
-            const userContact = report.profiles?.phone || report.profiles?.email || '';
-            
-            title.textContent = `${getTypeName(report.report_type)} Report`;
-            
-            // Process media URLs to ensure they're accessible
-            let mediaHTML = '';
-            if (report.report_media && report.report_media.length > 0) {
-                mediaHTML = `
-                    <div style="margin-top: 1.5rem;">
-                        <div style="font-weight: 600; margin-bottom: 1rem; color: var(--text-muted);">Media Attachments:</div>
-                        <div class="media-preview">
-                            ${report.report_media.map(media => {
-                                const mediaUrl = getMediaPublicUrl(media.media_url);
-                                return `
-                                    <div class="media-item">
-                                        ${media.media_type === 'image' ? 
-                                            `<img src="${mediaUrl}" alt="Report media" style="cursor: pointer;" onclick="window.open('${mediaUrl}', '_blank')">` : 
-                                            `<video controls><source src="${mediaUrl}" type="video/mp4"></video>`
-                                        }
-                                    </div>
-                                `;
-                            }).join('')}
+            try {
+                // Fetch media for this report
+                const { data: mediaItems } = await supabaseClient
+                    .from('report_media')
+                    .select('*')
+                    .eq('report_id', reportId);
+
+                currentReportMedia = mediaItems || [];
+
+                const modal = document.getElementById('report-modal');
+                const content = document.getElementById('report-details');
+                
+                // Generate media gallery HTML
+                let mediaGalleryHTML = '';
+                if (currentReportMedia.length > 0) {
+                    mediaGalleryHTML = `
+                        <div style="margin-top: 1.5rem;">
+                            <h4 style="margin-bottom: 1rem;"><i class="fas fa-images"></i> Attached Media (${currentReportMedia.length})</h4>
+                            <div class="media-gallery">
+                                ${currentReportMedia.map((media, index) => {
+                                    const isImage = media.media_type === 'image' || media.media_url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                                    const isVideo = media.media_type === 'video' || media.media_url.match(/\.(mp4|webm|mov|avi)$/i);
+                                    const mediaType = isImage ? 'image' : isVideo ? 'video' : 'file';
+                                    
+                                    return `
+                                        <div class="media-item" onclick="viewMedia(${index})">
+                                            ${isImage ? `
+                                                <img src="${media.media_url}" alt="Report Media ${index + 1}" onerror="this.src='https://via.placeholder.com/200x150?text=Image+Error'">
+                                            ` : isVideo ? `
+                                                <video>
+                                                    <source src="${media.media_url}" type="video/mp4">
+                                                    Your browser does not support the video tag.
+                                                </video>
+                                                <div class="media-type-badge">
+                                                    <i class="fas fa-play"></i> Video
+                                                </div>
+                                            ` : `
+                                                <div style="height: 150px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);">
+                                                    <i class="fas fa-file" style="font-size: 2rem; color: white;"></i>
+                                                </div>
+                                                <div class="media-type-badge">
+                                                    <i class="fas fa-file"></i> File
+                                                </div>
+                                            `}
+                                            <div class="media-item-overlay">
+                                                <i class="fas fa-search-plus" style="color: white; font-size: 1.5rem;"></i>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
                         </div>
+                    `;
+                }
+
+                content.innerHTML = `
+                    <div class="report-details-grid">
+                        <div class="detail-item">
+                            <h4>Report ID</h4>
+                            <p>#${report.id}</p>
+                        </div>
+                        <div class="detail-item">
+                            <h4>Status</h4>
+                            <p>${getStatusBadge(report.status)}</p>
+                        </div>
+                        <div class="detail-item">
+                            <h4>Type</h4>
+                            <p>${getTypeBadge(report.report_type)}</p>
+                        </div>
+                        <div class="detail-item">
+                            <h4>Created</h4>
+                            <p>${new Date(report.created_at).toLocaleString()}</p>
+                        </div>
+                    </div>
+                    
+                    <div style="background: #F9FAFB; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                        <h4 style="margin-top: 0; margin-bottom: 0.5rem;">Report Description</h4>
+                        <p style="line-height: 1.6; margin: 0;">${report.text_content || 'No description provided'}</p>
+                    </div>
+                    
+                    <div style="background: #E0E7FF; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                        <h4 style="margin-top: 0; margin-bottom: 1rem; color: #3730A3;">Reporter Information</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                            <div>
+                                <h5 style="margin: 0 0 4px 0; color: var(--text-muted); font-size: 0.9rem;">Name</h5>
+                                <p style="margin: 0; font-weight: 500;">${report.profiles?.full_name || 'Anonymous'}</p>
+                            </div>
+                            <div>
+                                <h5 style="margin: 0 0 4px 0; color: var(--text-muted); font-size: 0.9rem;">Username</h5>
+                                <p style="margin: 0; font-weight: 500;">${report.profiles?.username || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <h5 style="margin: 0 0 4px 0; color: var(--text-muted); font-size: 0.9rem;">Email</h5>
+                                <p style="margin: 0; font-weight: 500;">${report.profiles?.email || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <h5 style="margin: 0 0 4px 0; color: var(--text-muted); font-size: 0.9rem;">Phone</h5>
+                                <p style="margin: 0; font-weight: 500;">${report.profiles?.phone || 'N/A'}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${mediaGalleryHTML}
+                    
+                    <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
+                        <button class="btn-outline" onclick="updateReportStatus(${report.id})">
+                            <i class="fas fa-edit"></i> Update Status
+                        </button>
+                        <button class="btn-danger" onclick="deleteReport(${report.id})">
+                            <i class="fas fa-trash"></i> Delete Report
+                        </button>
+                        <button class="btn" onclick="closeModal()">
+                            Close
+                        </button>
+                    </div>
+                `;
+                
+                modal.style.display = 'flex';
+            } catch (error) {
+                console.error('Error fetching report media:', error);
+            }
+        }
+
+        // Function to view individual media
+        function viewMedia(index) {
+            const media = currentReportMedia[index];
+            if (!media) return;
+
+            const modal = document.getElementById('media-modal');
+            const content = document.getElementById('media-preview');
+            
+            const isImage = media.media_type === 'image' || media.media_url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+            const isVideo = media.media_type === 'video' || media.media_url.match(/\.(mp4|webm|mov|avi)$/i);
+            
+            if (isImage) {
+                content.innerHTML = `
+                    <img src="${media.media_url}" class="media-preview" alt="Media Preview" 
+                         onerror="this.src='https://via.placeholder.com/800x600?text=Image+Not+Available'">
+                    <div style="text-align: center; margin-top: 1rem; color: white;">
+                        <button class="btn-outline" onclick="deleteMedia(${media.id})" style="color: white; border-color: white;">
+                            <i class="fas fa-trash"></i> Delete Media
+                        </button>
+                    </div>
+                `;
+            } else if (isVideo) {
+                content.innerHTML = `
+                    <video controls class="media-preview">
+                        <source src="${media.media_url}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    <div style="text-align: center; margin-top: 1rem; color: white;">
+                        <button class="btn-outline" onclick="deleteMedia(${media.id})" style="color: white; border-color: white;">
+                            <i class="fas fa-trash"></i> Delete Media
+                        </button>
+                    </div>
+                `;
+            } else {
+                content.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: white;">
+                        <i class="fas fa-file" style="font-size: 4rem; margin-bottom: 1rem;"></i>
+                        <h3>File Attachment</h3>
+                        <p>${media.media_url}</p>
+                        <button class="btn" onclick="window.open('${media.media_url}', '_blank')">
+                            <i class="fas fa-external-link-alt"></i> Open File
+                        </button>
+                        <button class="btn-outline" onclick="deleteMedia(${media.id})" style="margin-left: 1rem; color: white; border-color: white;">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
                     </div>
                 `;
             }
             
-            content.innerHTML = `
-                <div class="report-details">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
-                        <div>
-                            <div style="font-weight: 600; font-size: 1.2rem; margin-bottom: 0.5rem;">
-                                ${getTypeIcon(report.report_type)} ${getTypeName(report.report_type)}
-                            </div>
-                            ${getStatusBadge(report.status)}
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-weight: 600; color: var(--text-muted);">Report ID:</div>
-                            <div>${report.id}</div>
-                        </div>
-                    </div>
-                    
-                    <div class="report-content">
-                        <div style="font-weight: 600; margin-bottom: 0.5rem; color: var(--text-muted);">Description:</div>
-                        <div>${report.text_content || 'No description provided'}</div>
-                    </div>
-                    
-                    <div class="report-meta">
-                        <span><i class="fas fa-user"></i> ${userName}</span>
-                        ${userContact ? `<span><i class="fas fa-phone"></i> ${userContact}</span>` : ''}
-                        <span><i class="far fa-calendar"></i> ${formatDate(report.created_at)}</span>
-                    </div>
-                    
-                    ${mediaHTML}
-                </div>
-                
-                <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
-                    <button class="btn" onclick="closeViewModal()">
-                        Close
-                    </button>
-                </div>
-            `;
-            
             modal.style.display = 'flex';
         }
 
-        // Function to update stats
-        function updateStats() {
-            const totalReports = allReports.length;
-            const pendingReports = allReports.filter(report => report.status === 'pending').length;
-            const resolvedReports = allReports.filter(report => report.status === 'resolved').length;
-            const criticalReports = allReports.filter(report => report.status === 'critical').length;
-            
-            const pendingPercentage = totalReports > 0 ? Math.round((pendingReports / totalReports) * 100) : 0;
-            const resolvedPercentage = totalReports > 0 ? Math.round((resolvedReports / totalReports) * 100) : 0;
-            const criticalPercentage = totalReports > 0 ? Math.round((criticalReports / totalReports) * 100) : 0;
+        // Function to update report status
+        async function updateReportStatus(reportId) {
+            const report = allReports.find(r => r.id === reportId);
+            if (!report) return;
 
-            // Today's reports
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const todayReports = allReports.filter(report => 
-                new Date(report.created_at) >= today
-            ).length;
+            const currentStatus = report.status;
+            const newStatus = prompt(
+                'Update report status:\n\n1. pending\n2. in-progress\n3. resolved\n\nCurrent status: ' + currentStatus,
+                currentStatus
+            );
 
-            document.getElementById('count-reports').innerText = totalReports;
-            document.getElementById('pending-reports').innerText = pendingReports;
-            document.getElementById('resolved-reports').innerText = resolvedReports;
-            document.getElementById('critical-reports').innerText = criticalReports;
-            document.getElementById('pending-percentage').innerText = pendingPercentage;
-            document.getElementById('resolved-percentage').innerText = resolvedPercentage;
-            document.getElementById('critical-percentage').innerText = criticalPercentage;
-            document.getElementById('today-reports').innerText = todayReports;
+            if (newStatus && ['pending', 'in-progress', 'resolved'].includes(newStatus.toLowerCase())) {
+                try {
+                    const { error } = await supabaseClient
+                        .from('report')
+                        .update({ status: newStatus.toLowerCase() })
+                        .eq('id', reportId);
+
+                    if (error) throw error;
+
+                    alert('Report status updated successfully!');
+                    fetchEmergencyReports();
+                    closeModal();
+                } catch (error) {
+                    console.error('Error updating report status:', error);
+                    alert('Error updating report status. Please try again.');
+                }
+            } else if (newStatus) {
+                alert('Invalid status. Please use: pending, in-progress, or resolved');
+            }
         }
 
-        // Function to close view modal
-        function closeViewModal() {
-            document.getElementById('view-modal').style.display = 'none';
+        // Function to delete media
+        async function deleteMedia(mediaId) {
+            if (!confirm('Are you sure you want to delete this media file? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                // First, get the media record to know the filename
+                const { data: media, error: fetchError } = await supabaseClient
+                    .from('report_media')
+                    .select('*')
+                    .eq('id', mediaId)
+                    .single();
+
+                if (fetchError) throw fetchError;
+
+                // Delete from storage bucket (report_media)
+                const mediaUrl = media.media_url;
+                const fileName = mediaUrl.split('/').pop();
+                
+                if (fileName) {
+                    const { error: storageError } = await supabaseClient
+                        .storage
+                        .from('report_media')
+                        .remove([fileName]);
+
+                    if (storageError) {
+                        console.warn('Could not delete from storage:', storageError);
+                        // Continue anyway to delete the database record
+                    }
+                }
+
+                // Delete from report_media table
+                const { error: deleteError } = await supabaseClient
+                    .from('report_media')
+                    .delete()
+                    .eq('id', mediaId);
+
+                if (deleteError) throw deleteError;
+
+                alert('Media deleted successfully!');
+                closeMediaModal();
+                
+                // Refresh the current report view
+                const reportId = media.report_id;
+                viewReport(reportId);
+            } catch (error) {
+                console.error('Error deleting media:', error);
+                alert('Error deleting media. Please try again.');
+            }
+        }
+
+        // Function to delete report and all associated media
+        async function deleteReport(reportId) {
+            if (!confirm('Are you sure you want to delete this report? This will also delete all associated media files. This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                // First, get all media for this report
+                const { data: mediaItems } = await supabaseClient
+                    .from('report_media')
+                    .select('*')
+                    .eq('report_id', reportId);
+
+                // Delete media files from storage
+                if (mediaItems && mediaItems.length > 0) {
+                    const fileNames = mediaItems.map(media => {
+                        const url = media.media_url;
+                        return url.split('/').pop();
+                    }).filter(name => name);
+
+                    if (fileNames.length > 0) {
+                        const { error: storageError } = await supabaseClient
+                            .storage
+                            .from('report_media')
+                            .remove(fileNames);
+
+                        if (storageError) {
+                            console.warn('Could not delete all media from storage:', storageError);
+                        }
+                    }
+
+                    // Delete media records from database
+                    await supabaseClient
+                        .from('report_media')
+                        .delete()
+                        .eq('report_id', reportId);
+                }
+
+                // Delete the report
+                const { error } = await supabaseClient
+                    .from('report')
+                    .delete()
+                    .eq('id', reportId);
+
+                if (error) throw error;
+
+                alert('Report and all associated media deleted successfully!');
+                fetchEmergencyReports();
+                closeModal();
+            } catch (error) {
+                console.error('Error deleting report:', error);
+                alert('Error deleting report. Please try again.');
+            }
+        }
+
+        // Function to close modal
+        function closeModal() {
+            document.getElementById('report-modal').style.display = 'none';
+        }
+
+        // Function to close media modal
+        function closeMediaModal() {
+            document.getElementById('media-modal').style.display = 'none';
         }
 
         // Function to refresh data
         function refreshData() {
-            fetchEmergencyReportsData();
-            const btn = event?.target;
+            fetchEmergencyReports();
+            const btn = event?.target || document.querySelector('.btn .fa-sync-alt')?.parentElement;
             if (btn) {
                 const originalHTML = btn.innerHTML;
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
@@ -1124,110 +1443,80 @@
         // Search and filter functionality
         document.getElementById('search-reports')?.addEventListener('input', function(e) {
             const searchTerm = e.target.value.toLowerCase();
-            const filtered = allReports.filter(report => 
-                (report.text_content || '').toLowerCase().includes(searchTerm) ||
-                (report.profiles?.full_name || '').toLowerCase().includes(searchTerm) ||
-                (report.profiles?.username || '').toLowerCase().includes(searchTerm) ||
-                report.report_type.toLowerCase().includes(searchTerm)
-            );
-            displayReports(filtered);
-        });
-
-        document.getElementById('filter-status')?.addEventListener('change', function(e) {
             filterReports();
         });
 
-        document.getElementById('filter-type')?.addEventListener('change', function(e) {
-            filterReports();
-        });
+        document.getElementById('filter-status')?.addEventListener('change', filterReports);
+        document.getElementById('filter-type')?.addEventListener('change', filterReports);
 
         function filterReports() {
-            const status = document.getElementById('filter-status').value;
-            const type = document.getElementById('filter-type').value;
+            const searchTerm = document.getElementById('search-reports').value.toLowerCase();
+            const statusFilter = document.getElementById('filter-status').value;
+            const typeFilter = document.getElementById('filter-type').value;
             
-            let filtered = [...allReports];
-            
-            if (status !== 'all') {
-                filtered = filtered.filter(report => report.status === status);
-            }
-            
-            if (type !== 'all') {
-                filtered = filtered.filter(report => report.report_type === type);
-            }
+            let filtered = allReports.filter(report => {
+                const matchesSearch = 
+                    (report.text_content && report.text_content.toLowerCase().includes(searchTerm)) ||
+                    (report.report_type && report.report_type.toLowerCase().includes(searchTerm)) ||
+                    (report.profiles?.full_name && report.profiles.full_name.toLowerCase().includes(searchTerm));
+                
+                const matchesStatus = statusFilter === 'all' || report.status === statusFilter;
+                const matchesType = typeFilter === 'all' || report.report_type === typeFilter;
+                
+                return matchesSearch && matchesStatus && matchesType;
+            });
             
             displayReports(filtered);
         }
 
-        // Function to load placeholder data (for demo purposes)
+        // Close modals when clicking outside
+        window.addEventListener('click', function(event) {
+            const reportModal = document.getElementById('report-modal');
+            const mediaModal = document.getElementById('media-modal');
+            
+            if (event.target === reportModal) {
+                closeModal();
+            }
+            if (event.target === mediaModal) {
+                closeMediaModal();
+            }
+        });
+
+        // Function to load placeholder data
         function loadPlaceholderData() {
             // Placeholder stats
-            document.getElementById('count-reports').innerText = '24';
-            document.getElementById('pending-reports').innerText = '12';
-            document.getElementById('resolved-reports').innerText = '8';
-            document.getElementById('critical-reports').innerText = '4';
-            document.getElementById('pending-percentage').innerText = '50';
-            document.getElementById('resolved-percentage').innerText = '33';
-            document.getElementById('critical-percentage').innerText = '17';
-            document.getElementById('today-reports').innerText = '3';
+            document.getElementById('count-total-reports').innerText = '156';
+            document.getElementById('count-pending').innerText = '42';
+            document.getElementById('count-resolved').innerText = '89';
+            document.getElementById('count-media').innerText = '78';
+            document.getElementById('today-reports').innerText = '12';
+            document.getElementById('week-resolved').innerText = '24';
 
-            // Placeholder reports with media URLs
+            // Placeholder reports
             const placeholderReports = [
-                { 
-                    id: 1, 
-                    report_type: 'medical',
-                    status: 'critical',
-                    text_content: 'Car accident on Main Street with injuries, need ambulance immediately.',
-                    user_id: '550e8400-e29b-41d4-a716-446655440001',
-                    created_at: new Date(),
-                    profiles: {
-                        full_name: 'John Doe',
-                        username: 'johndoe',
-                        email: 'john@example.com',
-                        phone: '987-654-3210'
-                    },
-                    report_media: [
-                        {
-                            id: 1,
-                            media_type: 'image',
-                            media_url: 'https://images.unsplash.com/photo-1588614959060-4d144f28b207?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
-                        }
-                    ]
-                },
-                { 
-                    id: 2, 
+                {
+                    id: 1,
                     report_type: 'fire',
+                    text_content: 'Large fire reported near downtown area, multiple buildings affected',
                     status: 'pending',
-                    text_content: 'Smoke coming from apartment building on 5th Avenue.',
-                    user_id: null,
-                    created_at: new Date(Date.now() - 3600000),
-                    profiles: null,
-                    report_media: [
-                        {
-                            id: 2,
-                            media_type: 'image',
-                            media_url: 'https://images.unsplash.com/photo-1566911435290-78bc4c4b389e?ixlib=rb-4.0.3&auto=format&fit=crop&w-600&q=80'
-                        },
-                        {
-                            id: 3,
-                            media_type: 'video',
-                            media_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4'
-                        }
-                    ]
+                    created_at: new Date(),
+                    profiles: { full_name: 'John Doe', username: 'johndoe', phone: '+1234567890', email: 'john@example.com' }
                 },
-                { 
-                    id: 3, 
-                    report_type: 'infrastructure',
+                {
+                    id: 2,
+                    report_type: 'medical',
+                    text_content: 'Medical emergency at Central Park, person collapsed',
+                    status: 'in-progress',
+                    created_at: new Date(Date.now() - 3600000),
+                    profiles: { full_name: 'Jane Smith', username: 'janesmith', phone: '+0987654321', email: 'jane@example.com' }
+                },
+                {
+                    id: 3,
+                    report_type: 'flood',
+                    text_content: 'Severe flooding in residential area, water level rising rapidly',
                     status: 'resolved',
-                    text_content: 'Power outage in downtown area affecting multiple buildings.',
-                    user_id: '550e8400-e29b-41d4-a716-446655440000',
-                    created_at: new Date(Date.now() - 7200000),
-                    profiles: {
-                        full_name: 'Admin User',
-                        username: 'admin',
-                        email: 'admin@example.com',
-                        phone: '123-456-7890'
-                    },
-                    report_media: []
+                    created_at: new Date(Date.now() - 86400000),
+                    profiles: { full_name: 'Robert Johnson', username: 'robjohn', phone: '+1122334455', email: 'robert@example.com' }
                 }
             ];
             
@@ -1235,19 +1524,9 @@
             displayReports(placeholderReports);
         }
 
-        // Initialize the emergency reports page
+        // Initialize the page
         document.addEventListener('DOMContentLoaded', function() {
-            fetchEmergencyReportsData();
-            
-            // Close modal when clicking outside
-            window.addEventListener('click', function(event) {
-                const modals = document.querySelectorAll('.modal');
-                modals.forEach(modal => {
-                    if (event.target === modal) {
-                        closeViewModal();
-                    }
-                });
-            });
+            fetchEmergencyReports();
         });
     </script>
 </body>
